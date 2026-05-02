@@ -1,5 +1,5 @@
 // background.js - Fixed for auto integration and segregation
-const API_URL = "http://localhost:5000/api/solve";
+const API_URL = "https://dsa-compass-server.onrender.com/api/solve";
 
 // Simple category guesser from title (can be improved)
 function getCategory(title) {
