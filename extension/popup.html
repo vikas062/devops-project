@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CodeCanon</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">CodeCanon</div>
+      <div class="status" id="status">Listening</div>
+    </header>
+
+    <section class="card" id="question-card">
+      <div class="label">Latest Detected</div>
+      <h1 id="question-title">No question detected yet</h1>
+      <div class="meta">
+        <span id="platform">—</span>
+        <span id="slug">—</span>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="tile">
+        <div class="label">Signal</div>
+        <div class="value" id="signal">Idle</div>
+      </div>
+      <div class="tile">
+        <div class="label">Detected At</div>
+        <div class="value" id="detected-at">—</div>
+      </div>
+    </section>
+
+    <footer>
+      <button id="clear" type="button">Clear</button>
+      <button id="debug" type="button">Debug</button>
+      <a href="http://localhost:5173/dashboard" target="_blank" rel="noreferrer">Dashboard</a>
+    </footer>
+  </div>
+  <script src="popup.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 32" fill="none">
+  <rect width="140" height="32" rx="8" fill="#0f172a"/>
+  <path d="M18 22l4-12 4 12" stroke="#38BDF8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M16 18h12" stroke="#38BDF8" stroke-width="3" stroke-linecap="round"/>
+  <text x="44" y="21" font-family="Space Grotesk, sans-serif" font-size="12" fill="#E2E8F0" letter-spacing="1">ATCODER</text>
+</svg>

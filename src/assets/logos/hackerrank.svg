@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 32" fill="none">
+  <rect width="140" height="32" rx="8" fill="#0f172a"/>
+  <polygon points="20,6 30,6 36,16 30,26 20,26 14,16" fill="#22C55E"/>
+  <text x="44" y="21" font-family="Space Grotesk, sans-serif" font-size="12" fill="#E2E8F0" letter-spacing="1">HACKERRANK</text>
+</svg>

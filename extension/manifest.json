@@ -1,0 +1,106 @@
+{
+  "manifest_version": 3,
+  "name": "CodeCanon Solve Verifier",
+  "version": "1.0.0",
+  "description": "Detects accepted solves and verifies them in CodeCanon.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://localhost:5000/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://leetcode.com/problems/*"
+      ],
+      "js": [
+        "toast.js",
+        "leetcode.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://practice.geeksforgeeks.org/problems/*",
+        "https://www.geeksforgeeks.org/problems/*"
+      ],
+      "js": [
+        "toast.js",
+        "gfg.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.hackerrank.com/challenges/*",
+        "https://www.hackerrank.com/contests/*/challenges/*"
+      ],
+      "js": [
+        "toast.js",
+        "hackerrank.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://codeforces.com/contest/*",
+        "https://codeforces.com/problemset/problem/*"
+      ],
+      "js": [
+        "toast.js",
+        "codeforces.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.codechef.com/*problems/*",
+        "https://www.codechef.com/practice/course/*"
+      ],
+      "js": [
+        "toast.js",
+        "codechef.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://atcoder.jp/contests/*"
+      ],
+      "js": [
+        "toast.js",
+        "atcoder.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.spoj.com/problems/*"
+      ],
+      "js": [
+        "toast.js",
+        "spoj.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "assets/logo.png",
+    "48": "assets/logo.png",
+    "128": "assets/logo.png"
+  },
+  "action": {
+    "default_title": "CodeCanon",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "assets/logo.png",
+      "48": "assets/logo.png",
+      "128": "assets/logo.png"
+    }
+  }
+}
