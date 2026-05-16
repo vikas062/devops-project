@@ -67,7 +67,13 @@ export const Login = ({ onAuth }) => {
               type="button"
               variant="outline"
               className="w-full border-black/20 dark:border-white/20 hover:bg-black/5 dark:bg-white/10"
-              onClick={() => window.location.href = "http://localhost:5000/api/auth/google"}
+              onClick={() => {
+                const backendUrl = import.meta.env.VITE_API_URL || "/api";
+                const authUrl = backendUrl.startsWith('http') 
+                  ? `${backendUrl}/auth/google`
+                  : `${window.location.origin}${backendUrl}/auth/google`;
+                window.location.href = authUrl;
+              }}
             >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                 <path
