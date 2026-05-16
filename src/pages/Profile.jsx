@@ -57,6 +57,24 @@ export const Profile = () => {
 
                 const { data } = await api.get(`/users/${target}`);
                 setProfile(data);
+
+                // Auto-sync if this is own profile and platformsData is empty
+                const hasHandles = data.user?.handles && Object.values(data.user.handles).some(h => h);
+                const hasPlatformData = data.user?.platformsData && Object.keys(data.user.platformsData).length > 0;
+                const isOwn = currentUser && data.user?.username === currentUser.username;
+                if (isOwn && hasHandles && !hasPlatformData) {
+                    // Fire-and-forget silent sync to populate stats
+                    try {
+                        const syncData = await api.post("/users/refresh-stats");
+                        setProfile(prev => ({
+                            ...prev,
+                            user: { ...prev.user, stats: syncData.data.stats, platformsData: syncData.data.platformsData },
+                            stats: syncData.data.stats
+                        }));
+                    } catch (syncErr) {
+                        console.warn("Auto-sync failed:", syncErr.message);
+                    }
+                }
             } catch (err) {
                 console.error("Profile load error:", err);
                 setError(err.response?.data?.message || err.message || "Failed to load profile");
@@ -102,7 +120,7 @@ export const Profile = () => {
         setProfile(prev => ({ ...prev, user: updatedUser }));
     };
 
-    const refreshStats = async () => {
+    const refreshStats = async (silent = false) => {
         try {
             setIsSyncing(true);
             const { data } = await api.post("/users/refresh-stats");
@@ -111,10 +129,10 @@ export const Profile = () => {
                 user: { ...prev.user, stats: data.stats, platformsData: data.platformsData },
                 stats: data.stats
             }));
-            setTimeout(() => alert("Stats synced from all connected platforms!"), 100);
+            if (!silent) setTimeout(() => alert("Stats synced from all connected platforms!"), 100);
         } catch (err) {
             console.error("Failed to refresh stats", err);
-            alert("Failed to sync stats.");
+            if (!silent) alert("Failed to sync stats.");
         } finally {
             setIsSyncing(false);
         }
@@ -140,11 +158,17 @@ export const Profile = () => {
         }
     };
 
-    // Calculate difficulty logic
-    const lcEasy = user.platformsData?.leetcode?.easy || 0;
-    const lcMed = user.platformsData?.leetcode?.medium || 0;
-    const lcHard = user.platformsData?.leetcode?.hard || 0;
+    // Calculate difficulty — prefer aggregated stats, fallback to LeetCode raw data
+    const lcEasy = user.stats?.easySolved || user.platformsData?.leetcode?.easy || 0;
+    const lcMed = user.stats?.mediumSolved || user.platformsData?.leetcode?.medium || 0;
+    const lcHard = user.stats?.hardSolved || user.platformsData?.leetcode?.hard || 0;
     const totDiff = lcEasy + lcMed + lcHard || 1; // Prevent div by zero
+
+    // Real streak & activity from stats
+    const maxStreak = user.stats?.maxStreak || 0;
+    const currentStreak = user.stats?.currentStreak || 0;
+    const totalSolved = stats?.totalSolved || user?.stats?.totalSolved || stats?.grandTotal || user?.stats?.grandTotal || 0;
+    const activeDays = stats?.activeDays || user?.stats?.activeDays || 0;
 
     return (
         <div className="bg-slate-50 dark:bg-[#050508] min-h-screen text-slate-900 dark:text-slate-200 font-sans selection:bg-[#a855f7]/30 transition-colors duration-300" ref={containerRef}>
@@ -199,26 +223,35 @@ export const Profile = () => {
                                 {/* Orb Glow */}
                                 <div className="absolute inset-0 bg-[#06b6d4]/20 blur-[40px] rounded-full scale-150"></div>
                                 <span className="text-6xl font-black bg-clip-text text-transparent bg-gradient-to-b from-slate-800 to-slate-500 dark:from-white dark:to-slate-400 drop-shadow-sm dark:drop-shadow-lg tracking-tighter relative z-10 flex flex-col items-center">
-                                    {stats?.totalSolved || user?.stats?.totalSolved || stats?.grandTotal || user?.stats?.grandTotal || 0}
+                                    {totalSolved}
                                 </span>
                             </div>
-                            <span className="text-xs text-[#06b6d4] font-medium mt-6 bg-[#06b6d4]/10 px-3 py-1 rounded-full border border-[#06b6d4]/20 relative z-10">Top 10%</span>
+                            {isSyncing
+                                ? <span className="text-xs text-amber-500 font-medium mt-6 animate-pulse">Syncing platforms...</span>
+                                : totalSolved > 0
+                                    ? <span className="text-xs text-[#06b6d4] font-medium mt-6 bg-[#06b6d4]/10 px-3 py-1 rounded-full border border-[#06b6d4]/20 relative z-10">Across all platforms</span>
+                                    : <span className="text-xs text-slate-500 font-medium mt-6">Connect platforms &amp; sync</span>
+                            }
                         </GlassCard>
 
                         {/* Active Days */}
                         <GlassCard className="flex flex-col justify-between">
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Consistency</h3>
-                                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-100 dark:bg-emerald-400/10 px-2 py-1 rounded border border-emerald-200 dark:border-emerald-400/20">{stats?.activeDays || user?.stats?.activeDays || 0} Days</span>
+                                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-100 dark:bg-emerald-400/10 px-2 py-1 rounded border border-emerald-200 dark:border-emerald-400/20">{activeDays} Days</span>
                             </div>
                             <div className="space-y-4">
                                 <div>
                                     <p className="text-slate-500 text-xs mb-1">Max Streak</p>
-                                    <p className="text-3xl font-bold text-slate-800 dark:text-white">{(stats?.activeDays || user?.stats?.activeDays) ? '63' : '0'}</p> {/* Placeholder max streak */}
+                                    <p className="text-3xl font-bold text-slate-800 dark:text-white">{maxStreak} 🔥</p>
                                 </div>
                                 <div className="w-full bg-slate-200 dark:bg-white/5 h-1.5 rounded-full overflow-hidden">
-                                    <div className="bg-[#06b6d4] h-full w-[60%] shadow-[0_0_10px_#06b6d4]"></div>
+                                    <div
+                                        className="bg-[#06b6d4] h-full shadow-[0_0_10px_#06b6d4] transition-all duration-700"
+                                        style={{ width: activeDays > 0 ? `${Math.min(100, (currentStreak / Math.max(maxStreak, 1)) * 100)}%` : '0%' }}
+                                    />
                                 </div>
+                                <p className="text-[10px] text-slate-500">Current streak: <span className="text-[#06b6d4] font-semibold">{currentStreak} days</span></p>
                             </div>
                         </GlassCard>
                     </div>
@@ -312,10 +345,10 @@ export const Profile = () => {
                     {/* Full Width Bottom: Heatmap */}
                     <GlassCard>
                         <CodolioHeatmap
-                            totalSolved={stats?.totalSolved || user?.stats?.totalSolved || stats?.grandTotal || user?.stats?.grandTotal || 0}
-                            activeDays={stats?.activeDays || user?.stats?.activeDays || 0}
-                            maxStreak={63}
-                            currentStreak={63}
+                            totalSolved={totalSolved}
+                            activeDays={activeDays}
+                            maxStreak={maxStreak}
+                            currentStreak={currentStreak}
                         />
                     </GlassCard>
 

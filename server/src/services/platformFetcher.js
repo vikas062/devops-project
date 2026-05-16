@@ -39,42 +39,80 @@ const fetchWithRetry = async (url, options = {}, retries = 3, delay = 1000) => {
 
 export const fetchLeetCodeData = async (username) => {
     if (!username) return null;
+
+    // --- Try unofficial proxy first (bypasses Cloudflare better) ---
+    try {
+        const proxyRes = await axiosInstance.get(
+            `https://alfa-leetcode-api.onrender.com/userProfile/${username}`,
+            { timeout: 12000 }
+        );
+        const pd = proxyRes.data;
+        if (pd && pd.totalSolved != null) {
+            console.log(`LeetCode proxy success for ${username}: ${pd.totalSolved} solved`);
+            return {
+                username,
+                totalSolved: pd.totalSolved || 0,
+                easy: pd.easySolved || 0,
+                medium: pd.mediumSolved || 0,
+                hard: pd.hardSolved || 0,
+                ranking: pd.ranking || 0,
+                contestRating: 0,
+                contestCount: 0,
+                activeDays: pd.totalActiveDays || 0,
+                activityHeatmap: (() => {
+                    try {
+                        const cal = typeof pd.submissionCalendar === 'string'
+                            ? JSON.parse(pd.submissionCalendar)
+                            : (pd.submissionCalendar || {});
+                        return Object.entries(cal).map(([ts, count]) => ({
+                            date: new Date(Number(ts) * 1000).toISOString().split('T')[0],
+                            count
+                        }));
+                    } catch (e) { return []; }
+                })(),
+                topics: {}
+            };
+        }
+    } catch (proxyErr) {
+        console.warn(`LeetCode proxy failed for ${username}: ${proxyErr.message} — falling back to GraphQL`);
+    }
+
+    // --- Fallback: Direct GraphQL ---
     const query = `
     query userProfile($username: String!) {
       matchedUser(username: $username) {
         submitStats: submitStatsGlobal {
-          acSubmissionNum {
-            difficulty
-            count
-          }
+          acSubmissionNum { difficulty count }
         }
-        profile {
-          ranking
-        }
+        profile { ranking }
         submissionCalendar
       }
       userContestRanking(username: $username) {
         attendedContestsCount
         rating
-        globalRanking
       }
-    }
-  `;
+    }`;
 
     try {
-        const response = await axiosInstance.post("https://leetcode.com/graphql", {
-            query,
-            variables: { username }
-        }, {
-            headers: {
-                "Content-Type": "application/json",
-                "Referer": "https://leetcode.com",
-                "Origin": "https://leetcode.com"
+        const response = await axiosInstance.post(
+            "https://leetcode.com/graphql",
+            { query, variables: { username } },
+            {
+                headers: {
+                    "Content-Type": "application/json",
+                    "Referer": "https://leetcode.com",
+                    "Origin": "https://leetcode.com",
+                    "x-csrftoken": "dummy",
+                    "cookie": "csrftoken=dummy"
+                }
             }
-        });
+        );
 
-        const data = response.data.data;
-        if (!data.matchedUser) return null;
+        const data = response.data?.data;
+        if (!data?.matchedUser) {
+            console.warn(`LeetCode: user '${username}' not found`);
+            return null;
+        }
 
         const stats = data.matchedUser.submitStats.acSubmissionNum;
         const totalSolved = stats.find(s => s.difficulty === "All")?.count || 0;
@@ -82,34 +120,28 @@ export const fetchLeetCodeData = async (username) => {
         const medium = stats.find(s => s.difficulty === "Medium")?.count || 0;
         const hard = stats.find(s => s.difficulty === "Hard")?.count || 0;
 
-        // Parse calendar for active days
         let activeDays = 0;
+        let activityHeatmap = [];
         try {
             const calendar = JSON.parse(data.matchedUser.submissionCalendar || '{}');
             activeDays = Object.keys(calendar).length;
-        } catch (e) { }
+            activityHeatmap = Object.entries(calendar).map(([ts, count]) => ({
+                date: new Date(ts * 1000).toISOString().split('T')[0],
+                count
+            }));
+        } catch (e) {}
 
-        // Contest Rating
         const contestRating = data.userContestRanking ? Math.round(data.userContestRanking.rating) : 0;
-        const contestCount = data.userContestRanking ? data.userContestRanking.attendedContestsCount : 0;
+        const contestCount = data.userContestRanking?.attendedContestsCount || 0;
 
-        // Topics (Mock or fetch separately if needed, simplified here)
-        const topics = {};
-
+        console.log(`LeetCode GraphQL success for ${username}: ${totalSolved} solved`);
         return {
-            username,
-            totalSolved,
-            easy,
-            medium,
-            hard,
+            username, totalSolved, easy, medium, hard,
             ranking: data.matchedUser.profile.ranking || 0,
-            contestRating,
-            contestCount,
-            activeDays,
-            topics
+            contestRating, contestCount, activeDays, activityHeatmap, topics: {}
         };
     } catch (error) {
-        console.error(`Error fetching LeetCode data for ${username}:`, error.message);
+        console.error(`LeetCode GraphQL failed for ${username}: ${error.response?.status} ${error.message}`);
         return null;
     }
 };
@@ -328,11 +360,11 @@ export const fetchGFGData = async (handle) => {
     try {
         console.log(`APIs failed GFG ${handle}, trying Puppeteer...`);
         const pupSolved = await fetchWithPuppeteer(
-            `https://auth.geeksforgeeks.org/user/${handle}/practice/`,
+            `https://www.geeksforgeeks.org/user/${handle}/`,
             null,
             () => {
                 const body = document.body.innerText;
-                const m = body.match(/Problems Solved[:\s]+(\d+)/i);
+                const m = body.match(/(?:Problems Solved|Total Problem Solved)[^\d]*(\d+)/i);
                 return m ? parseInt(m[1]) : 0;
             }
         );
@@ -474,9 +506,12 @@ export const fetchHackerEarthData = async (handle) => {
     if (!handle) return null;
     try {
         const response = await axiosInstance.get(`https://www.hackerearth.com/@${handle}`);
+        const $ = cheerio.load(response.data);
+        const bodyText = $("body").text();
+        const match = bodyText.match(/Problems solved[^\d]*(\d+)/i) || bodyText.match(/(\d+)\s*Problems solved/i);
         return {
             handle,
-            totalSolved: 0
+            totalSolved: match ? parseInt(match[1]) : 0
         };
     } catch (error) {
         console.error(`Axios failed HE ${handle}, trying Puppeteer...`);
@@ -484,9 +519,12 @@ export const fetchHackerEarthData = async (handle) => {
             `https://www.hackerearth.com/@${handle}`,
             null,
             () => {
-                // Try to scrape
-                // Very hard without specific selectors or login as HE is dynamic
-                // But worth a shot if we find standard class
+                const body = document.body.innerText;
+                // Try to find numbers near "Problems solved" or "solved"
+                const match1 = body.match(/Problems solved[^\d]*(\d+)/i);
+                const match2 = body.match(/(\d+)\s*Problems solved/i);
+                if (match1) return parseInt(match1[1]);
+                if (match2) return parseInt(match2[1]);
                 return 0;
             }
         );

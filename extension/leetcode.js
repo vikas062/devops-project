@@ -1,19 +1,29 @@
-// leetcode.js - Fixed for auto detection and submission
-const API_URL = "http://localhost:5000/api/solve";
+// leetcode.js - CodeCanon LeetCode Content Script
 
 const getProblemSlug = () => {
-  const match = window.location.pathname.match(/problems\/([^/]+)/);
+  const match = window.location.pathname.match(/\/problems\/([^/]+)/);
   return match ? match[1] : null;
 };
 
-// 1. Inject script to access page variables (window.leetcodeConfig)
+// Inject into page context to read LeetCode's internal state
 const injectScript = () => {
   const script = document.createElement('script');
   script.textContent = `
-    setTimeout(() => {
-      const user = window.leetcodeConfig?.userName || window.__INITIAL_STATE__?.user?.username;
-      window.postMessage({ type: "CC_USER_INFO", username: user }, "*");
-    }, 1000); // Wait a bit for LeetCode to init
+    (function() {
+      let attempts = 0;
+      const tryGetUser = () => {
+        attempts++;
+        const user = window.leetcodeConfig?.userName
+          || window.__INITIAL_STATE__?.user?.username
+          || document.querySelector('a[href^="/u/"]')?.getAttribute('href')?.split('/')[2];
+        if (user) {
+          window.postMessage({ type: "CC_LC_USER", username: user }, "*");
+        } else if (attempts < 10) {
+          setTimeout(tryGetUser, 800);
+        }
+      };
+      tryGetUser();
+    })();
   `;
   (document.head || document.documentElement).appendChild(script);
   script.remove();
@@ -21,10 +31,8 @@ const injectScript = () => {
 
 let cachedHandle = null;
 
-// 2. Listen for the handle
 window.addEventListener("message", (event) => {
-  if (event.source !== window) return;
-  if (event.data.type === "CC_USER_INFO" && event.data.username) {
+  if (event.source === window && event.data?.type === "CC_LC_USER" && event.data.username) {
     cachedHandle = event.data.username;
   }
 });
@@ -33,102 +41,142 @@ injectScript();
 
 const getHandle = () => {
   if (cachedHandle) return cachedHandle;
+  // Fallback: read from nav link
   return document.querySelector("a[href^='/u/']")?.getAttribute("href")?.split("/")[2] || null;
 };
 
 const getProblemTitle = () => {
-  const titleEl = document.querySelector(".text-title-large") || document.querySelector("[data-cy='question-title']") || document.querySelector("h1");
-  if (titleEl) {
-    return titleEl.textContent.replace(/^\d+\.\s*/, "").trim();
+  // Prefer specific LeetCode title selectors
+  const selectors = [
+    "a[href*='/problems/'] div.text-title-large",
+    ".text-title-large a",
+    ".text-title-large",
+    "[data-cy='question-title']",
+    ".css-v3d350",
+  ];
+  for (const sel of selectors) {
+    const el = document.querySelector(sel);
+    if (el?.textContent?.trim()) {
+      return el.textContent.replace(/^\d+\.\s*/, "").trim();
+    }
   }
+  // Fallback: parse document.title ("1. Two Sum - LeetCode" → "Two Sum")
   if (document.title) {
     return document.title.split(" - ")[0].replace(/^\d+\.\s*/, "").trim();
   }
   return null;
 };
 
+// FIXED: Precise accepted detection — only triggers on the submission result page
 const hasAccepted = () => {
-  const bodyText = document.body?.innerText.toLowerCase() || "";
-  return bodyText.includes("accepted") || bodyText.includes("success") || bodyText.includes("details") && bodyText.includes("runtime");
+  // Method 1: Check for specific submission result container
+  const resultStatus = document.querySelector(
+    "[data-e2e-locator='submission-result'], .text-green-s, [class*='accepted']"
+  );
+  if (resultStatus) {
+    const text = resultStatus.textContent?.trim().toLowerCase();
+    if (text === "accepted") return true;
+  }
+
+  // Method 2: Check the result header text specifically (not body-wide)
+  const resultContainers = document.querySelectorAll(
+    "[class*='result'], [class*='submission-result'], [class*='SuccessView']"
+  );
+  for (const el of resultContainers) {
+    if (el.children.length <= 5) { // Narrow scope
+      const text = el.textContent.trim().toLowerCase();
+      if (text.startsWith("accepted")) return true;
+    }
+  }
+
+  // Method 3: URL changed to /submissions/ with accepted state
+  if (window.location.pathname.includes("/submissions/")) {
+    const successEl = document.querySelector(".text-green-s, [data-status='Accepted']");
+    if (successEl) return true;
+  }
+
+  return false;
 };
 
 const hasAlreadySolved = () => {
-  try {
-    const tick = document.querySelector("svg.text-brand-orange");
-    const tick2 = document.querySelector("svg.text-green-s");
-    if (tick || tick2) return true;
-  } catch (e) { }
-
-  const bodyText = document.body?.innerText.toLowerCase() || "";
-  return bodyText.includes("solved") || bodyText.includes("you have solved this problem");
+  // Green checkmark SVG on problem page
+  const greenCheck = document.querySelector(
+    "svg.text-brand-orange, svg.text-green-s, [class*='checkmark'][class*='green'], [class*='solved']"
+  );
+  return !!greenCheck;
 };
 
 const updatePopup = (accepted) => {
   if (typeof chrome === "undefined" || !chrome.runtime) return;
-  const payload = {
-    platform: "LeetCode",
-    questionTitle: getProblemTitle(),
-    problemSlug: getProblemSlug(),
-    detectedAt: new Date().toISOString(),
-    accepted: Boolean(accepted)
-  };
   try {
-    chrome.runtime.sendMessage({ type: "UPDATE_POPUP", payload });
-  } catch (e) { }
+    chrome.runtime.sendMessage({
+      type: "UPDATE_POPUP",
+      payload: {
+        platform: "LeetCode",
+        questionTitle: getProblemTitle(),
+        problemSlug: getProblemSlug(),
+        detectedAt: new Date().toISOString(),
+        accepted: Boolean(accepted)
+      }
+    });
+  } catch (e) {}
 };
 
-const sendSolve = async () => {
-  const payload = {
-    platform: "LeetCode",
-    questionTitle: getProblemTitle(),
-    problemSlug: getProblemSlug(),
-    handle: getHandle(),
-    accepted: true,
-    detectedAt: new Date().toISOString()
-  };
+const sendSolve = () => {
+  const title = getProblemTitle();
+  const slug = getProblemSlug();
+  if (!title) return;
 
-  if (!payload.questionTitle) return;
+  const key = `cc_lc_${slug || title}`;
+  if (sessionStorage.getItem(key)) return;
+  sessionStorage.setItem(key, "1");
 
   updatePopup(true);
-
-  const key = `cc_leetcode_${payload.problemSlug || payload.questionTitle}`;
-  if (sessionStorage.getItem(key)) return;
 
   try {
     chrome.runtime.sendMessage({
       type: "SOLVE_DETECTED",
-      payload
+      payload: {
+        platform: "LeetCode",
+        questionTitle: title,
+        problemSlug: slug,
+        handle: getHandle(),
+        accepted: true,
+        detectedAt: new Date().toISOString()
+      }
     });
-    sessionStorage.setItem(key, "1");
   } catch (err) {
-    console.warn("CodeCanon: Extension context invalidated. Please reload the page.");
+    console.warn("CodeCanon: Extension context invalidated.");
   }
 };
 
 let initialCheckDone = false;
+let solveAlreadySent = false;
 
 const intervalId = setInterval(() => {
-  if (typeof chrome === "undefined" || !chrome.runtime || !chrome.runtime.id) {
+  if (typeof chrome === "undefined" || !chrome.runtime?.id) {
     clearInterval(intervalId);
     return;
   }
+
+  if (solveAlreadySent) return; // Stop polling after first send
+
   const accepted = hasAccepted();
   const alreadySolved = !initialCheckDone && hasAlreadySolved();
 
   if (accepted || alreadySolved) {
     if (alreadySolved) {
-      console.log("CodeCanon: LeetCode problem was already previously solved! Syncing retroactively.");
+      console.log("CodeCanon [LeetCode]: Previously solved — syncing retroactively.");
       initialCheckDone = true;
     } else {
-      console.log("CodeCanon: 'Accepted' detected in LeetCode from new submission!");
+      console.log("CodeCanon [LeetCode]: New Accepted submission detected!");
     }
     sendSolve();
+    solveAlreadySent = true;
   } else {
     if (getProblemSlug()) {
       updatePopup(false);
-      if (document.readyState === "complete") {
-        initialCheckDone = true;
-      }
+      if (document.readyState === "complete") initialCheckDone = true;
     }
   }
 }, 2000);

@@ -141,6 +141,34 @@ export const ConnectPlatformsModal = ({ isOpen, onClose, user, onUpdate, onSync 
         </button>
     );
 
+    const handleResetProfile = async () => {
+        if (!window.confirm("Are you sure you want to completely RESET your profile? This will delete all your solved questions, stats, connected handles, and profile details. This CANNOT be undone.")) return;
+        
+        setLoading(true);
+        try {
+            await api.post("/users/reset-everything");
+            
+            // Clear local form data visually
+            setFormData({
+                name: "",
+                bio: "",
+                handles: {},
+                work: [],
+                projects: []
+            });
+            
+            // Wait a moment and then sync (which will fetch the empty user object)
+            if (onSync) await onSync();
+            onClose();
+            // Force a page reload to clear out any lingering React state in other components
+            window.location.reload();
+        } catch (err) {
+            console.error("Failed to reset profile", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto border-slate-800 bg-slate-950/95 backdrop-blur-xl">
@@ -243,11 +271,16 @@ export const ConnectPlatformsModal = ({ isOpen, onClose, user, onUpdate, onSync 
                     )}
                 </div>
 
-                <DialogFooter>
-                    <Button variant="ghost" onClick={onClose} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-900 dark:text-white">Cancel</Button>
-                    <Button onClick={handleSubmit} disabled={loading} className="bg-purple-600 hover:bg-purple-700 text-white">
-                        {loading ? "Saving..." : "Save Changes"}
+                <DialogFooter className="flex justify-between items-center sm:justify-between w-full">
+                    <Button variant="outline" onClick={handleResetProfile} disabled={loading} className="border-rose-500/30 text-rose-500 hover:bg-rose-500/10 mr-auto">
+                        Reset Profile
                     </Button>
+                    <div className="flex gap-2">
+                        <Button variant="ghost" onClick={onClose} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Cancel</Button>
+                        <Button onClick={handleSubmit} disabled={loading} className="bg-purple-600 hover:bg-purple-700 text-white">
+                            {loading ? "Saving..." : "Save Changes"}
+                        </Button>
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

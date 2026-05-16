@@ -25,37 +25,19 @@ const getHandle = () => {
 };
 
 const hasAccepted = () => {
-  // Check for success indicators specifically in HackerRank's submission UI
-  if (document.querySelector(".success-indicator") || document.querySelector(".congratulations")) return true;
-
-  const statusEls = document.querySelectorAll(".testcase-status, .status-title, .status");
-  for (let el of statusEls) {
-    const text = el.textContent.trim().toLowerCase();
-    if (text === "accepted" || text === "success") {
-      if (window.getComputedStyle(el).color.includes("rgb(0, 128, 0)") || window.getComputedStyle(el).color.includes("green") || el.classList.toString().includes("success")) {
-        return true;
-      }
-    }
+  const text = document.body ? document.body.innerText.toLowerCase() : "";
+  if (text.includes("congratulations!") || 
+      text.includes("status: accepted") || 
+      (text.includes("success") && text.includes("test case"))) {
+      return true;
   }
-  return false;
+  return !!document.querySelector(".success-indicator, .congratulations, [class*='success']");
 };
 
 const hasAlreadySolved = () => {
-  // HackerRank solved badges
-  if (document.querySelector(".solved-badge") || document.querySelector(".ui-icon-check")) {
-    return true;
-  }
-
-  const spanEls = document.querySelectorAll("span, p, div");
-  for (let el of spanEls) {
-    if (el.children.length === 0 && el.textContent.trim().toLowerCase() === "solved") {
-      // ensure it's a green status marker
-      if (window.getComputedStyle(el).color.includes("rgb(0, ") || window.getComputedStyle(el).color.includes("green") || document.querySelector(".status-solved")) {
-        return true;
-      }
-    }
-  }
-  return false;
+  const text = document.body ? document.body.innerText.toLowerCase() : "";
+  if (text.includes("you have earned") || text.includes("solved")) return true;
+  return !!(document.querySelector(".solved-badge") || document.querySelector(".ui-icon-check"));
 };
 
 const updatePopup = (accepted) => {

@@ -21,13 +21,22 @@ const statsSchema = new mongoose.Schema({
   easy: { type: Number, default: 0 },
   medium: { type: Number, default: 0 },
   hard: { type: Number, default: 0 },
+  easySolved: { type: Number, default: 0 },   // aggregated across all platforms
+  mediumSolved: { type: Number, default: 0 },  // aggregated across all platforms
+  hardSolved: { type: Number, default: 0 },    // aggregated across all platforms
   activeDays: { type: Number, default: 0 },
+  maxStreak: { type: Number, default: 0 },
+  currentStreak: { type: Number, default: 0 },
   contests: { type: Number, default: 0 },
+  totalContests: { type: Number, default: 0 },
+  maxRating: { type: Number, default: 0 },
   dsaTopics: { type: Object, default: {} },
   contestRatings: { type: Object, default: {} },
   awards: [{ type: String }],
+  badges: [{ type: String }],
   cScore: { type: Number, default: 0 },
   activityHeatmap: [{ type: Object }], // [{ date: '2025-10-01', count: 5 }]
+  topics: { type: Map, of: Number, default: {} },
   lastSynced: { type: Date }
 }, { _id: false });
 

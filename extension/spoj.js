@@ -28,38 +28,13 @@ const getHandle = () => {
 };
 
 const hasAccepted = () => {
-    // SPOJ uses status codes like 'status_15' or explicitly prints 'accepted' in the status column
-    const statusEls = document.querySelectorAll(".status_15, .status-accepted, td");
-    for (let el of statusEls) {
-        if (el.children.length === 0 || el.classList.contains("status_15")) {
-            const text = el.textContent.trim().toLowerCase();
-            if (text === "accepted" || el.classList.contains("status_15") || text === "ac") {
-                // Check if colored green or marked as accepted class
-                if (el.classList.contains("status_15") || window.getComputedStyle(el).color.includes("rgb(0, 128, 0)") || window.getComputedStyle(el).color.includes("green")) {
-                    return true;
-                }
-            }
-        }
-    }
+    const text = document.body ? document.body.innerText.toLowerCase() : "";
+    if (text.includes("status: accepted") || document.querySelector(".status_15") || text.includes("result: accepted")) return true;
     return false;
 };
 
 const hasAlreadySolved = () => {
-    // SPOJ shows a checkmark in the problem table or changes the problem title row color
-    // Typically, on a problem page, we can see if the user has an AC entry in the bottom submissions table.
-    const tableCells = document.querySelectorAll("td");
-    for (let cell of tableCells) {
-        if (cell.textContent.trim().toLowerCase() === "accepted" && (window.getComputedStyle(cell).color.includes("green") || cell.classList.contains("status_15"))) {
-            return true;
-        }
-    }
-
-    // Check for "solved" icon near the title
-    if (document.querySelector(".fa-check, [title*='solved']")) {
-        return true;
-    }
-
-    return false;
+    return !!(document.querySelector(".status_15") || document.querySelector(".fa-check"));
 };
 
 const updatePopup = (accepted) => {

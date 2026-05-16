@@ -11,6 +11,18 @@ export const Login = ({ onAuth }) => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Bridge: send token to Chrome extension after login
+  const bridgeTokenToExtension = (token, user) => {
+    try {
+      // Method 1: postMessage picked up by extension content script
+      window.postMessage({ type: "CC_SET_TOKEN", token, username: user?.username }, "*");
+      // Method 2: direct runtime message (only works if extension is installed and page is allowlisted)
+      if (window.__CC_EXT_ID__) {
+        chrome.runtime.sendMessage(window.__CC_EXT_ID__, { type: "SET_TOKEN", token });
+      }
+    } catch (e) {}
+  };
+
   const submit = async (event) => {
     event.preventDefault();
     setError("");
@@ -18,6 +30,7 @@ export const Login = ({ onAuth }) => {
     try {
       const { data } = await api.post("/auth/login", form);
       localStorage.setItem("cc_token", data.token);
+      bridgeTokenToExtension(data.token, data.user);
       onAuth?.(data.user);
       navigate("/dashboard");
     } catch (err) {

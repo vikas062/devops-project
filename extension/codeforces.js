@@ -28,34 +28,20 @@ const getHandle = () => {
 };
 
 const hasAccepted = () => {
-    // Check specific table cells or spans with the 'verdict-accepted' class or color
-    const acceptedEls = document.querySelectorAll(".verdict-accepted, span, td");
-    for (let el of acceptedEls) {
-        if (el.children.length === 0) {
-            const text = el.textContent.trim().toLowerCase();
-            if (text === "accepted" || text === "happy new year!" || text === "pretests passed") {
-                // Codeforces usually colors these green or uses specific classes
-                if (el.classList.contains("verdict-accepted") || window.getComputedStyle(el).color.includes("rgb(0, 169, 0)") || window.getComputedStyle(el).color.includes("green")) {
-                    return true;
-                }
-            }
-        }
+    const text = document.body ? document.body.innerText.toLowerCase() : "";
+    if (text.includes("pretests passed") || 
+        text.includes("happy new year!") || 
+        text.includes("verdict: accepted") ||
+        document.querySelector(".verdict-accepted")) {
+        return true;
     }
     return false;
 };
 
 const hasAlreadySolved = () => {
-    // Codeforces typically shows a checkmark or 'Accepted' in the submission history
-    // or next to the problem in the problemset list.
-    // If we are on a problem page, we check the recent submissions table for green "Accepted"
     const statusBox = document.querySelector(".status-frame-datatable, .status");
-    if (statusBox) {
-        const accepted = statusBox.querySelector(".verdict-accepted");
-        if (accepted) return true;
-    }
+    if (statusBox && statusBox.querySelector(".verdict-accepted")) return true;
 
-    // Fallback: Codeforces doesn't have a giant "You have solved this" button.
-    // We look for general green "Accepted" text near the top or in sidebars.
     const sideboxes = document.querySelectorAll(".roundbox");
     for (let box of sideboxes) {
         if (box.textContent.toLowerCase().includes("last submissions")) {

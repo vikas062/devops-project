@@ -26,27 +26,16 @@ const getHandle = () => {
 };
 
 const hasAccepted = () => {
-    // AtCoder submissions table uses specific classes for verdicts
-    const verdictEls = document.querySelectorAll(".label-success, td.text-center");
-    for (let el of verdictEls) {
-        if (el.textContent.trim() === "AC") {
-            // Check if it's explicitly green
-            if (el.classList.contains("label-success") || window.getComputedStyle(el).color.includes("rgba(92, 184, 92") || window.getComputedStyle(el).color.includes("green")) {
-                return true;
-            }
-        }
-    }
+    const text = document.body ? document.body.innerText.toLowerCase() : "";
+    const successLabel = document.querySelector(".label-success");
+    if (successLabel && successLabel.textContent.trim() === "AC") return true;
+    if (text.includes("status: ac")) return true;
     return false;
 };
 
 const hasAlreadySolved = () => {
-    // In AtCoder problem lists and tables, they usually put a green tag or label for solved.
-    const successLabels = document.querySelectorAll("span.label-success, td");
-    for (let el of successLabels) {
-        if (el.textContent.trim() === "AC" && (el.classList.contains("label-success") || window.getComputedStyle(el).color.includes("rgba(92, 184, 92") || window.getComputedStyle(el).color.includes("green"))) {
-            return true;
-        }
-    }
+    const successLabel = document.querySelector(".label-success");
+    if (successLabel && successLabel.textContent.trim() === "AC") return true;
     return false;
 };
 

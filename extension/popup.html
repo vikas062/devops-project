@@ -1,47 +1,75 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CodeCanon</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
-
 <body>
-  <div class="container">
-    <header>
-      <div class="logo">CodeCanon</div>
-      <div class="status" id="status">Listening</div>
-    </header>
+  <!-- LOGGED OUT VIEW -->
+  <div id="auth-view" style="display:none;">
+    <div class="header">
+      <span class="logo">⚡ CodeCanon</span>
+      <span class="badge" id="auth-status-badge">Not Connected</span>
+    </div>
+    <p class="hint">Login to sync your solves automatically.</p>
+    <div class="field">
+      <input type="text" id="login-email" placeholder="Email or Username" autocomplete="off" />
+    </div>
+    <div class="field">
+      <input type="password" id="login-password" placeholder="Password" />
+    </div>
+    <button id="login-btn" class="btn-primary">Login</button>
+    <p id="login-error" class="error-msg" style="display:none;"></p>
+    <div class="divider"></div>
+    <div class="api-row">
+      <label class="small-label">API</label>
+      <select id="api-select" class="api-select">
+        <option value="https://dsa-compass-server.onrender.com/api">Production</option>
+        <option value="http://localhost:5000/api">Local Dev</option>
+      </select>
+    </div>
+  </div>
 
-    <section class="card" id="question-card">
-      <div class="label">Latest Detected</div>
-      <h1 id="question-title">No question detected yet</h1>
-      <div class="meta">
+  <!-- LOGGED IN VIEW -->
+  <div id="main-view" style="display:none;">
+    <div class="header">
+      <span class="logo">⚡ CodeCanon</span>
+      <span class="badge connected" id="user-badge">Connected</span>
+    </div>
+
+    <div class="detect-card">
+      <div class="row">
+        <span class="label">Platform</span>
         <span id="platform">—</span>
+      </div>
+      <div class="row">
+        <span class="label">Problem</span>
+        <span id="question-title" class="truncate">No question detected</span>
+      </div>
+      <div class="row">
+        <span class="label">Slug</span>
         <span id="slug">—</span>
       </div>
-    </section>
-
-    <section class="grid">
-      <div class="tile">
-        <div class="label">Signal</div>
-        <div class="value" id="signal">Idle</div>
+      <div class="row">
+        <span class="label">Signal</span>
+        <span id="signal">Idle</span>
       </div>
-      <div class="tile">
-        <div class="label">Detected At</div>
-        <div class="value" id="detected-at">—</div>
+      <div class="row">
+        <span class="label">Detected</span>
+        <span id="detected-at">—</span>
       </div>
-    </section>
+    </div>
 
-    <footer>
-      <button id="clear" type="button">Clear</button>
-      <button id="debug" type="button">Debug</button>
-      <a href="http://localhost:5173/dashboard" target="_blank" rel="noreferrer">Dashboard</a>
-    </footer>
+    <div id="status" class="status-bar">Listening...</div>
+
+    <div class="action-row">
+      <button id="clear" class="btn-ghost">Clear</button>
+      <button id="debug" class="btn-ghost">Debug</button>
+      <button id="logout-btn" class="btn-ghost danger">Logout</button>
+    </div>
   </div>
+
   <script src="popup.js"></script>
 </body>
-
 </html>

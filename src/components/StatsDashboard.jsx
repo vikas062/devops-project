@@ -17,14 +17,28 @@ export const StatsDashboard = ({ user }) => {
     const syncStats = async () => {
         setLoading(true);
         try {
-            // we will use the user handle if provided, else the backend will use the token's user id
-            const payload = user?.username ? { username: user.username } : {};
-            const { data } = await api.post('/stats/sync', payload);
-            if (data.success) {
+            // Use the main refresh-stats endpoint which properly fetches all platforms
+            const { data } = await api.post('/users/refresh-stats');
+            if (data.stats) {
                 setStats(data.stats);
             }
         } catch (e) {
             console.error("Failed to sync stats", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const resetProgress = async () => {
+        if (!window.confirm("Are you sure you want to reset all your progress, stats, and connected handles? This cannot be undone.")) return;
+        setLoading(true);
+        try {
+            const { data } = await api.post('/users/reset-progress');
+            if (data.stats) {
+                setStats(data.stats);
+            }
+        } catch (e) {
+            console.error("Failed to reset progress", e);
         } finally {
             setLoading(false);
         }
@@ -107,13 +121,22 @@ export const StatsDashboard = ({ user }) => {
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
 
                 <h3 className="text-xl text-white mb-4 font-medium tracking-tight">Connect Platforms to See Your Unified Stats</h3>
-                <button
-                    onClick={syncStats}
-                    disabled={loading}
-                    className="relative px-6 py-2.5 overflow-hidden rounded-xl bg-white text-black font-medium transition-all hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_25px_rgba(255,255,255,0.2)]"
-                >
-                    {loading ? "Aggregating Data..." : "Load Initial Stats"}
-                </button>
+                <div className="flex gap-4">
+                    <button
+                        onClick={syncStats}
+                        disabled={loading}
+                        className="relative px-6 py-2.5 overflow-hidden rounded-xl bg-white text-black font-medium transition-all hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_25px_rgba(255,255,255,0.2)]"
+                    >
+                        {loading ? "Aggregating Data..." : "Load Initial Stats"}
+                    </button>
+                    <button
+                        onClick={resetProgress}
+                        disabled={loading}
+                        className="relative px-6 py-2.5 overflow-hidden rounded-xl bg-rose-500 text-white font-medium transition-all hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(244,63,94,0.1)] hover:shadow-[0_0_25px_rgba(244,63,94,0.2)]"
+                    >
+                        {loading ? "Resetting..." : "Reset Progress"}
+                    </button>
+                </div>
             </Card>
         );
     }
@@ -123,7 +146,17 @@ export const StatsDashboard = ({ user }) => {
 
     return (
         <div ref={containerRef} className="mb-8 relative z-10 w-full">
-            <div className="flex justify-end mb-6 relative z-20">
+            <div className="flex justify-end mb-6 relative z-20 gap-3">
+                <button
+                    onClick={resetProgress}
+                    disabled={loading}
+                    className="group relative px-5 py-2 overflow-hidden rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 font-medium text-sm transition-all hover:bg-rose-500/20 hover:border-rose-500/40 flex items-center gap-2"
+                >
+                    <svg className="w-4 h-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span className="relative z-10">Reset Progress</span>
+                </button>
                 <button
                     onClick={syncStats}
                     disabled={loading}

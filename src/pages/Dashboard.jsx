@@ -250,10 +250,28 @@ export const Dashboard = ({ isDemo = false }) => {
           <ActivityGraph />
           <TopicRadar questions={questions} solves={solves} />
         </div>
-        {/* Navigation & Stats Header */}
         <div className="flex justify-between items-end mb-6 relative z-10 px-2 mt-8 md:mt-12">
           <h2 className="text-3xl font-medium tracking-tight text-slate-800 dark:text-white mb-0 text-neon-cyan drop-shadow-sm dark:drop-shadow-none">Progress Tracking</h2>
-          <div className="flex gap-4">
+          <div className="flex gap-4 items-center">
+            {!isDemo && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-rose-500/50 text-rose-500 hover:bg-rose-500 hover:text-white transition-colors shadow-sm hidden md:inline-flex"
+                onClick={async () => {
+                  if (!window.confirm("Are you sure you want to reset your dashboard? This will clear all your solved problems and stats.")) return;
+                  try {
+                    await api.post("/users/reset-progress");
+                    setSolves([]);
+                  } catch (e) {
+                    console.error(e);
+                    alert("Failed to reset dashboard");
+                  }
+                }}
+              >
+                Reset Dashboard
+              </Button>
+            )}
             <Badge className="bg-purple-100 dark:bg-purple-500/10 text-purple-600 dark:text-purple-300 border-purple-200 dark:border-purple-500/30 px-4 py-1.5 text-sm backdrop-blur-md rounded-lg shadow-sm">
               Coverage {stats.coverage}%
             </Badge>
