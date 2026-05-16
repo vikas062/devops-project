@@ -5,27 +5,39 @@ server/node_modules/
 # Build output
 dist/
 
-# Logs
+# ───────────────────────────────────────────
+# Logs & debug files (never commit these)
+# ───────────────────────────────────────────
 *.log
+*.txt
 dev.log
-vite_response.log
-build.log
-build_error.log
-build_error_utf8.log
-build_log.txt
-build_readable.txt
-build_ascii.txt
 
+# ───────────────────────────────────────────
+# Temporary / debug dump files
+# ───────────────────────────────────────────
+*.bak
+*.backup
+check_*.js
+fix_*.cjs
+test-*.js
+debug_*.txt
+dump_*.html
+*_dump.html
+out.json
+users.json
+
+# ───────────────────────────────────────────
 # Environment variables (NEVER commit these)
+# ───────────────────────────────────────────
 .env
 .env.local
 .env.production
 server/.env
 
-# OS files
+# ───────────────────────────────────────────
+# OS & Editor files
+# ───────────────────────────────────────────
 .DS_Store
 Thumbs.db
-
-# Editor
 .vscode/
 .idea/
