@@ -9,6 +9,7 @@ import { PlatformLogo } from "../components/PlatformLogo";
 import { AnimatedCounter } from "../components/AnimatedCounter";
 import { VideoBackground } from "../components/VideoBackground";
 import { AboutVideoCarousel } from "../components/AboutVideoCarousel";
+import platformStackImg from "../assets/platform_stack_v2.png";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -243,7 +244,7 @@ export const Landing = () => {
                   Live Sync Active
                 </div>
                 <img
-                  src="/src/assets/platform_stack_v2.png"
+                  src={platformStackImg}
                   alt="Multi-platform compatibility dashboard"
                   className="w-full rounded-lg object-cover border border-black/10 dark:border-white/10 opacity-90 transition-opacity duration-700 group-hover:opacity-100"
                 />
