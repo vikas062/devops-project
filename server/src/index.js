@@ -23,8 +23,8 @@ app.use(cors({
       "http://127.0.0.1:5173",
       process.env.CLIENT_ORIGIN
     ];
-    // Allow extensions or undefined origins (like curl), or specific allowed origins
-    if (!origin || origin.startsWith("chrome-extension://") || allowedOrigins.includes(origin)) {
+    // Allow extensions or undefined origins (like curl), or specific allowed origins, or any Vercel deployment
+    if (!origin || origin.startsWith("chrome-extension://") || origin.includes("vercel.app") || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));

@@ -165,7 +165,7 @@ router.get(
 router.get(
   "/google/callback",
   passport.authenticate("google", {
-    failureRedirect: `${process.env.CLIENT_ORIGIN}/login`,
+    failureRedirect: `${process.env.CLIENT_ORIGIN || "https://dsa-compass.vercel.app"}/login`,
     session: false // We use JWT, so no session
   }),
   (req, res) => {
@@ -174,7 +174,7 @@ router.get(
     const token = signToken(user);
 
     // Redirect to frontend with token
-    res.redirect(`${process.env.CLIENT_ORIGIN}/auth-callback?token=${token}`);
+    res.redirect(`${process.env.CLIENT_ORIGIN || "https://dsa-compass.vercel.app"}/auth-callback?token=${token}`);
   }
 );
 

@@ -68,7 +68,8 @@ export const Login = ({ onAuth }) => {
               variant="outline"
               className="w-full border-black/20 dark:border-white/20 hover:bg-black/5 dark:bg-white/10"
               onClick={() => {
-                const backendUrl = import.meta.env.VITE_API_URL || "/api";
+                const isProd = import.meta.env.PROD;
+                const backendUrl = import.meta.env.VITE_API_URL || (isProd ? "https://dsa-compass-server.onrender.com/api" : "/api");
                 const authUrl = backendUrl.startsWith('http') 
                   ? `${backendUrl}/auth/google`
                   : `${window.location.origin}${backendUrl}/auth/google`;
