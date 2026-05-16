@@ -1,81 +1,110 @@
+// ─────────────────────────────────────────────────────────
+// server/src/index.js — Express Server Entry Point
+//
+// Responsibilities:
+//   • CORS configuration (dev + production origins)
+//   • Middleware setup (passport, json parser, morgan)
+//   • API route registration
+//   • Database connection
+//   • Global error handling
+// ─────────────────────────────────────────────────────────
+
 import "express-async-errors";
 import "dotenv/config";
-import express from "express";
-import cors from "cors";
-import morgan from "morgan";
-import { connectDb } from "./config/db.js";
-import passport from "./config/passport.js";
-import authRoutes from "./routes/auth.js";
-import questionRoutes from "./routes/questions.js";
-import solveRoutes from "./routes/solve.js";
-import userRoutes from "./routes/users.js";
-import statsRoutes from "./routes/stats.js";
-import { useMockStore } from "./utils/mockStore.js";
+import express  from "express";
+import cors     from "cors";
+import morgan   from "morgan";
 
-const app = express();
+import { connectDb }     from "./config/db.js";
+import passport          from "./config/passport.js";
+import authRoutes        from "./routes/auth.js";
+import questionRoutes    from "./routes/questions.js";
+import solveRoutes       from "./routes/solve.js";
+import userRoutes        from "./routes/users.js";
+import statsRoutes       from "./routes/stats.js";
+import { useMockStore }  from "./utils/mockStore.js";
+
+const app  = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(passport.initialize());
-app.use(cors({
-  origin: function (origin, callback) {
+// ─────────────────────────────────────────────────────────
+// CORS — Allow dev, production Vercel, and Chrome extension
+// ─────────────────────────────────────────────────────────
+const corsOptions = {
+  origin: (origin, callback) => {
     const allowedOrigins = [
       "http://localhost:5173",
       "http://127.0.0.1:5173",
-      process.env.CLIENT_ORIGIN
+      process.env.CLIENT_ORIGIN,
     ];
-    // Allow extensions or undefined origins (like curl), or specific allowed origins, or any Vercel deployment
-    if (!origin || origin.startsWith("chrome-extension://") || origin.includes("vercel.app") || allowedOrigins.includes(origin)) {
+
+    const isAllowed =
+      !origin ||                               // curl / server-to-server
+      origin.startsWith("chrome-extension://") || // Chrome extension
+      origin.includes("vercel.app") ||         // Any Vercel deployment
+      allowedOrigins.includes(origin);         // Explicit whitelist
+
+    if (isAllowed) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error(`CORS: Origin '${origin}' not allowed`));
     }
   },
-  credentials: true
-}));
+  credentials: true,
+};
+
+// ─────────────────────────────────────────────────────────
+// Middleware
+// ─────────────────────────────────────────────────────────
+app.use(passport.initialize());
+app.use(cors(corsOptions));
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan("dev"));
 
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok" });
-});
+// ─────────────────────────────────────────────────────────
+// Routes
+// ─────────────────────────────────────────────────────────
+app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
-app.use("/api/auth", authRoutes);
+app.use("/api/auth",      authRoutes);
 app.use("/api/questions", questionRoutes);
-app.use("/api/solve", solveRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/stats", statsRoutes);
+app.use("/api/solve",     solveRoutes);
+app.use("/api/users",     userRoutes);
+app.use("/api/stats",     statsRoutes);
 
-app.use((err, req, res, next) => {
-  console.error("Global Error Handler:", err);
-  res.status(500).json({ message: "Internal Server Error" });
+// ─────────────────────────────────────────────────────────
+// Global error handler
+// ─────────────────────────────────────────────────────────
+app.use((err, _req, res, _next) => {
+  console.error("[Server Error]", err.message || err);
+  res.status(err.status || 500).json({ message: err.message || "Internal Server Error" });
 });
 
+// ─────────────────────────────────────────────────────────
+// Start server
+// ─────────────────────────────────────────────────────────
 const start = async () => {
   try {
-    if (!useMockStore()) {
-      await connectDb();
-      console.log("Running with Real MongoDB.");
+    if (useMockStore()) {
+      console.log("⚠️  Running with in-memory mock store (no MongoDB).");
     } else {
-      console.log("Running with mock in-memory store (no MongoDB).");
+      await connectDb();
+      console.log("✅ Connected to MongoDB.");
     }
+
     app.listen(PORT, () => {
-      console.log(`Server running on ${PORT}`);
+      console.log(`🚀 Server running on port ${PORT}`);
     });
   } catch (error) {
-    console.error("Failed to start server", error);
+    console.error("❌ Failed to start server:", error);
     process.exit(1);
   }
 };
 
 start();
 
-// Global Error Handling
-process.on("uncaughtException", (err) => {
-  console.error("UNCAUGHT EXCEPTION! 💥 Shutting down...", err);
-  process.exit(1);
-});
-
-process.on("unhandledRejection", (err) => {
-  console.error("UNHANDLED REJECTION! 💥 Shutting down...", err);
-  process.exit(1);
-});
+// ─────────────────────────────────────────────────────────
+// Process-level error safety net
+// ─────────────────────────────────────────────────────────
+process.on("uncaughtException",  (err) => { console.error("💥 Uncaught Exception:",    err); process.exit(1); });
+process.on("unhandledRejection", (err) => { console.error("💥 Unhandled Rejection:",   err); process.exit(1); });
