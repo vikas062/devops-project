@@ -20,7 +20,7 @@ export const Login = ({ onAuth }) => {
       if (window.__CC_EXT_ID__) {
         chrome.runtime.sendMessage(window.__CC_EXT_ID__, { type: "SET_TOKEN", token });
       }
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const submit = async (event) => {
@@ -70,7 +70,7 @@ export const Login = ({ onAuth }) => {
               onClick={() => {
                 const isProd = import.meta.env.PROD;
                 const backendUrl = import.meta.env.VITE_API_URL || (isProd ? "https://dsa-compass-server.onrender.com/api" : "/api");
-                const authUrl = backendUrl.startsWith('http') 
+                const authUrl = backendUrl.startsWith('http')
                   ? `${backendUrl}/auth/google`
                   : `${window.location.origin}${backendUrl}/auth/google`;
                 window.location.href = authUrl;
