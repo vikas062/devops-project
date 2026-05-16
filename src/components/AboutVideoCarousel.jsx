@@ -26,7 +26,7 @@ export const AboutVideoCarousel = () => {
     }, []);
 
     return (
-        <div ref={containerRef} className="absolute inset-0 w-full h-full z-0 overflow-hidden bg-black pointer-events-none">
+        <div ref={containerRef} className="absolute inset-0 z-0 w-full h-full overflow-hidden bg-black pointer-events-none">
 
             <div className="video-bg-layer absolute inset-[-10%] w-[120%] h-[120%]">
                 <video
@@ -34,7 +34,7 @@ export const AboutVideoCarousel = () => {
                     loop
                     muted
                     playsInline
-                    className="absolute inset-0 w-full h-full object-cover opacity-50"
+                    className="absolute inset-0 object-cover w-full h-full opacity-50"
                     onError={(e) => console.error("AboutVideoCarousel Error:", e)}
                 >
                     <source src="/videos/dark-leetcode-autotype.mp4" type="video/mp4" />

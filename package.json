@@ -8,7 +8,9 @@
     "client": "vite",
     "server": "cd server && npm run dev",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "cd server && npm start",
+    "install:server": "cd server && npm install"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.3",
