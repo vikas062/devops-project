@@ -1,0 +1,21 @@
+# ═══════════════════════════════════════════════════════════════
+# prometheus.yml — Prometheus Scrape Configuration
+# Scrapes metrics from the CodeCanon backend every 15 seconds
+# ═══════════════════════════════════════════════════════════════
+
+global:
+  scrape_interval:     15s   # How often to scrape targets
+  evaluation_interval: 15s   # How often to evaluate rules
+
+scrape_configs:
+
+  # Scrape Prometheus itself
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Scrape CodeCanon backend /api/metrics endpoint
+  - job_name: "codecanon-backend"
+    static_configs:
+      - targets: ["backend:5000"]
+    metrics_path: "/api/metrics"

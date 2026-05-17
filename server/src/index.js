@@ -11,9 +11,10 @@
 
 import "express-async-errors";
 import "dotenv/config";
-import express  from "express";
-import cors     from "cors";
-import morgan   from "morgan";
+import express       from "express";
+import cors          from "cors";
+import morgan        from "morgan";
+import client        from "prom-client";   // Prometheus metrics
 
 import { connectDb }     from "./config/db.js";
 import passport          from "./config/passport.js";
@@ -26,6 +27,20 @@ import { useMockStore }  from "./utils/mockStore.js";
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
+
+// ─────────────────────────────────────────────────────────
+// Prometheus — Collect default Node.js metrics
+// ─────────────────────────────────────────────────────────
+const register = new client.Registry();
+client.collectDefaultMetrics({ register });
+
+// Custom counter: track total API requests
+const httpRequestCounter = new client.Counter({
+  name:   "codecanon_http_requests_total",
+  help:   "Total number of HTTP requests received",
+  labelNames: ["method", "route", "status"],
+  registers: [register],
+});
 
 // ─────────────────────────────────────────────────────────
 // CORS — Allow dev, production Vercel, and Chrome extension
@@ -64,7 +79,25 @@ app.use(morgan("dev"));
 // ─────────────────────────────────────────────────────────
 // Routes
 // ─────────────────────────────────────────────────────────
-app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
+app.get("/api/health",  (_req, res) => res.json({ status: "ok" }));
+
+// Prometheus metrics endpoint — scraped by Prometheus every 15s
+app.get("/api/metrics", async (_req, res) => {
+  res.setHeader("Content-Type", register.contentType);
+  res.send(await register.metrics());
+});
+
+// Middleware to count every request
+app.use((_req, res, next) => {
+  res.on("finish", () => {
+    httpRequestCounter.inc({
+      method: _req.method,
+      route:  _req.path,
+      status: res.statusCode,
+    });
+  });
+  next();
+});
 
 app.use("/api/auth",      authRoutes);
 app.use("/api/questions", questionRoutes);
