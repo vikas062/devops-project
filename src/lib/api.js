@@ -11,10 +11,9 @@
 
 import axios from "axios";
 
-const PROD_API_URL = "https://dsa-compass-server.onrender.com/api";
-
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || (import.meta.env.PROD ? PROD_API_URL : "/api"),
+  // Use VITE_API_URL if set, otherwise relative /api (nginx proxies to backend)
+  baseURL: import.meta.env.VITE_API_URL || "/api",
 });
 
 // Attach JWT token to every outgoing request
