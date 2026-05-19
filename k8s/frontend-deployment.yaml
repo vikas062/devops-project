@@ -1,0 +1,35 @@
+# ═══════════════════════════════════════════════════════════════
+# frontend-deployment.yaml — CodeCanon Frontend Deployment
+# Runs the React app served by Nginx
+# ═══════════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: codecanon-frontend
+  labels:
+    app: codecanon-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: codecanon-frontend
+  template:
+    metadata:
+      labels:
+        app: codecanon-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: vikassingh062/codecanon-frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+      imagePullSecrets:
+        - name: dockerhub-secret

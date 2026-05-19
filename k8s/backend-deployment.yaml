@@ -1,0 +1,38 @@
+# ═══════════════════════════════════════════════════════════════
+# backend-deployment.yaml — CodeCanon Backend Deployment
+# Runs the Express.js API server container
+# ═══════════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: codecanon-backend
+  labels:
+    app: codecanon-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: codecanon-backend
+  template:
+    metadata:
+      labels:
+        app: codecanon-backend
+    spec:
+      containers:
+        - name: backend
+          image: vikassingh062/codecanon-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          envFrom:
+            - secretRef:
+                name: codecanon-backend-secret
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      imagePullSecrets:
+        - name: dockerhub-secret
