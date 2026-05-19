@@ -12,13 +12,10 @@
 pipeline {
     agent any
 
-    // ─────────────────────────────────────────
-    // Environment — Jenkins Credentials
-    // ─────────────────────────────────────────
     environment {
-        DOCKER_USERNAME = credentials('DOCKER_USERNAME')   // DockerHub username
-        DOCKER_PASSWORD = credentials('DOCKER_PASSWORD')   // DockerHub password
-        EC2_HOST        = credentials('EC2_HOST')          // EC2 IP: 13.232.177.179
+        DOCKER_USERNAME = credentials('DOCKER_USERNAME')
+        DOCKER_PASSWORD = credentials('DOCKER_PASSWORD')
+        EC2_HOST        = credentials('EC2_HOST')
         BACKEND_IMAGE   = "${DOCKER_USERNAME}/codecanon-backend:latest"
         FRONTEND_IMAGE  = "${DOCKER_USERNAME}/codecanon-frontend:latest"
     }
@@ -32,7 +29,7 @@ pipeline {
             steps {
                 echo '📥 Checking out repository...'
                 checkout scm
-                echo "✅ Branch: ${env.BRANCH_NAME ?: 'master'} | Commit: ${env.GIT_COMMIT?.take(7)}"
+                echo "✅ Commit: ${env.GIT_COMMIT?.take(7) ?: 'latest'}"
             }
         }
 
@@ -43,7 +40,7 @@ pipeline {
             steps {
                 echo '⚙️  Installing dependencies and building frontend...'
                 sh 'node --version && npm --version'
-                sh 'npm ci --prefer-offline'
+                sh 'npm install'
                 sh 'npm run build'
                 echo '✅ Frontend build successful!'
             }
@@ -67,7 +64,7 @@ pipeline {
                 sh "docker push ${BACKEND_IMAGE}"
                 sh "docker push ${FRONTEND_IMAGE}"
 
-                echo '✅ Images pushed successfully!'
+                echo '✅ Images pushed!'
             }
             post {
                 always {
@@ -77,36 +74,26 @@ pipeline {
         }
 
         // ─────────────────────────────────────────
-        // Stage 4: Deploy to Kubernetes (EC2)
+        // Stage 4: Deploy to K8s
         // ─────────────────────────────────────────
         stage('Deploy to K8s') {
             steps {
                 echo '🚀 Deploying to Kubernetes on EC2...'
-                sshagent(credentials: ['EC2_SSH_KEY']) {
+                withCredentials([
+                    sshUserPrivateKey(
+                        credentialsId: 'EC2_SSH_KEY',
+                        keyFileVariable: 'SSH_KEY_FILE',
+                        usernameVariable: 'SSH_USER'
+                    )
+                ]) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} '
-                            # Apply dockerhub pull secret (if exists)
-                            kubectl apply -f ~/k8s/dockerhub-secret.yaml --validate=false 2>/dev/null || true
-
-                            # Apply backend manifests
-                            kubectl apply -f ~/k8s/backend-secret.yaml --validate=false 2>/dev/null || true
-                            kubectl apply -f ~/k8s/backend-deployment.yaml --validate=false
-                            kubectl apply -f ~/k8s/backend-service.yaml --validate=false
-
-                            # Apply frontend manifests
-                            kubectl apply -f ~/k8s/frontend-deployment.yaml --validate=false
-                            kubectl apply -f ~/k8s/frontend-service.yaml --validate=false
-
-                            # Force pull new images
+                        chmod 600 \$SSH_KEY_FILE
+                        ssh -o StrictHostKeyChecking=no -i \$SSH_KEY_FILE ubuntu@${EC2_HOST} '
                             kubectl rollout restart deployment/codecanon-backend || true
                             kubectl rollout restart deployment/codecanon-frontend || true
-
-                            # Wait for rollout (timeout 90s — t3.micro is slow)
                             kubectl rollout status deployment/codecanon-backend --timeout=90s || true
                             kubectl rollout status deployment/codecanon-frontend --timeout=90s || true
-
-                            echo "=== Pod Status ==="
-                            kubectl get pods
+                            echo "=== Pod Status ===" && kubectl get pods
                         '
                     """
                 }
@@ -120,32 +107,21 @@ pipeline {
         stage('Health Check') {
             steps {
                 echo '❤️  Running health check...'
-                sh 'sleep 20'
-                sh "curl -f --retry 3 --retry-delay 5 http://${EC2_HOST}:30500/api/health || exit 1"
-                sh "curl -f --retry 3 --retry-delay 5 http://${EC2_HOST}:30080 || exit 1"
-                echo '✅ App is live and healthy!'
+                sh 'sleep 15'
+                sh "curl -f --retry 3 --retry-delay 5 http://${EC2_HOST}:30500/api/health"
+                echo '✅ App is live!'
             }
         }
     }
 
-    // ─────────────────────────────────────────
-    // Post Actions
-    // ─────────────────────────────────────────
     post {
         success {
-            echo """
-            ╔══════════════════════════════════╗
-            ║  🎉 DEPLOYMENT SUCCESSFUL!        ║
-            ║  Frontend: http://${EC2_HOST}:30080   ║
-            ║  Backend:  http://${EC2_HOST}:30500   ║
-            ╚══════════════════════════════════╝
-            """
+            echo '🎉 DEPLOYMENT SUCCESSFUL! App live at http://${EC2_HOST}:30080'
         }
         failure {
-            echo '❌ Pipeline failed! Check logs above for details.'
+            echo '❌ Pipeline failed! Check logs above.'
         }
         always {
-            echo '🧹 Cleaning up Docker images from Jenkins agent...'
             sh 'docker image prune -f || true'
         }
     }
