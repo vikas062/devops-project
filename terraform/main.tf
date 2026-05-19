@@ -47,6 +47,15 @@ resource "aws_security_group" "codecanon_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # HTTPS (Frontend)
+  ingress {
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   # Backend API
   ingress {
     description = "Backend API"
