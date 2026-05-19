@@ -108,7 +108,7 @@ pipeline {
             steps {
                 echo '❤️  Running health check...'
                 sh 'sleep 15'
-                sh "curl -f --retry 3 --retry-delay 5 http://${EC2_HOST}:30500/api/health"
+                sh "curl -fsk --retry 3 --retry-delay 5 https://13.204.29.48.nip.io/api/health"
                 echo '✅ App is live!'
             }
         }
@@ -116,7 +116,7 @@ pipeline {
 
     post {
         success {
-            echo '🎉 DEPLOYMENT SUCCESSFUL! App live at http://${EC2_HOST}:30080'
+            echo '🎉 DEPLOYMENT SUCCESSFUL! App live at https://13.204.29.48.nip.io'
         }
         failure {
             echo '❌ Pipeline failed! Check logs above.'
