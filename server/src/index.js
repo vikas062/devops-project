@@ -50,6 +50,7 @@ const corsOptions = {
     const allowedOrigins = [
       "http://localhost:5173",
       "http://127.0.0.1:5173",
+      "http://13.204.29.48:30080",
       process.env.CLIENT_ORIGIN,
     ];
 
